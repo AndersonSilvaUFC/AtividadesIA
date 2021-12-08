@@ -34,33 +34,6 @@ vector<int> transforma(Node* node){
 	return ans;
 }
 
-vector<int> bfs(Graph *g, int origem, int destino){
-	queue<Node*> q = queue<Node*>();
-
-	Node* atual= new Node();
-	atual->parent = nullptr;
-	atual->value = origem;
-	q.push(atual);
-	while(!q.empty()){
-		atual = q.front();
-		q.pop();
-		if(atual->value == destino)
-			return transforma(atual);
-
-		for(int i : g->neighbors(atual->value)){
-			if(g->getMark(i) != 1){
-				Node* novo = new Node();
-				novo->parent = atual;
-				novo->value = i;
-				atual->filhos.push_back(novo);
-				q.push(novo);
-				g->setMark(i,1);
-			}
-		}
-	}
-	return vector<int>();
-}
-
 vector<int> dfs(Graph *g,int origem, int destino ){
 	stack<Node*> tree = stack<Node*>();
 	Node* currentNode = new Node();
@@ -171,7 +144,7 @@ int main(int argc, char *argv[]){
 	grafo->addEdge(19,18,86);
 
 	
-	vector<int> solucao = bfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
+	vector<int> solucao = dfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
 	printaSolucao(grafo,solucao);
 
 	return 0;
