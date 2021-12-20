@@ -8,58 +8,69 @@ string cidades[] = {"Arad", "Timisoara", "Zerind", "Oradea", "Lugoj", "Mehadia",
 
 struct Node{
 	int value;
+	int cost;
 	Node* parent;
-	list<Node*> filhos;
+	list<Node*> sons; //Filhos na árvore de busca, a borda é a fila
 };
 
-void printaSolucao(Graph *g, vector<int> l){
-	int custo = 0;
-	int i;
-	for(i = 0; i<l.size()-1; i++){
-		custo += g->weight(l.at(i),l.at(i+1));
+void printaSolucao(Graph *g, Node* node){
+	int custo = node->cost;
 
-		cout << cidades[l.at(i)] << " -> ";
-
-	}
-	cout << cidades[l.at(i)] << ". Custo total: " << custo << endl;
-}
-
-vector<int> transforma(Node* node){
 	vector<int> ans = vector<int>();
 	while(node != nullptr){
 		ans.push_back(node->value);
 		node = node->parent;
 	}
 	reverse(ans.begin(), ans.end());
-	return ans;
+
+	int i;
+	for(i = 0; i<ans.size()-1; i++){
+		cout << cidades[ans.at(i)] << " -> ";
+	}
+	cout << cidades[ans.at(i)] << ". Custo total: " << custo << endl;
 }
 
-vector<int> bfs(Graph *g, int origem, int destino){
-	queue<Node*> q = queue<Node*>();
+bool isNotInBorda(int value,queue<Node*> borda){
+	while(!borda.empty()){
+		if(value == borda.front()->value)
+			return false;
+		borda.pop();
+	}
+	return true;
+}
+
+void bfs(Graph *g, int origem, int destino){
+	queue<Node*> borda = queue<Node*>();
+	unordered_map<int,bool> exploreds;
+	for(int i=0; i<g->n(); i++)
+		exploreds[i] = false;
 
 	Node* atual= new Node();
-	atual->parent = nullptr;
 	atual->value = origem;
-	q.push(atual);
-	while(!q.empty()){
-		atual = q.front();
-		q.pop();
+	atual->cost = 0;
+	atual->parent = nullptr;
+	borda.push(atual);
 
-		if(atual->value == destino)
-			return transforma(atual);
+	while(!borda.empty()){
+		atual = borda.front();
+		exploreds[atual->value]= true;
+		borda.pop();
 
 		for(int i : g->neighbors(atual->value)){
-			if(g->getMark(i) != 1){
-				Node* novo = new Node();
-				novo->parent = atual;
-				novo->value = i;
-				atual->filhos.push_back(novo);
-				q.push(novo);
-				g->setMark(i,1);
+			Node* filho = new Node();
+			filho->value = i;
+			filho->cost = atual->cost + g->weight(atual->value, filho->value);
+			filho->parent = atual;
+			atual->sons.push_back(filho);
+			if(!exploreds[filho->value] && isNotInBorda(filho->value,borda)){
+				if(filho->value == destino){
+					printaSolucao(g,filho);
+					return;	
+				}
+				borda.push(filho);
 			}
 		}
 	}
-	return vector<int>();
 }
 
 int indexOf(string cidades[], int n, string cidade){
@@ -71,7 +82,7 @@ int indexOf(string cidades[], int n, string cidade){
 }
 
 int main(int argc, char *argv[]){
-	int N = 25;
+	int N = 20;
 	Graph *grafo;
 	grafo = new Graph( N );
 
@@ -145,8 +156,7 @@ int main(int argc, char *argv[]){
 	grafo->addEdge(19,18,86);
 
 	
-	vector<int> solucao = bfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
-	printaSolucao(grafo,solucao);
+	bfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
 
 	return 0;
 }

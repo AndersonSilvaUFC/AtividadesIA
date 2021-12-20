@@ -4,7 +4,7 @@ using namespace std;
 
 string cidades[] = {"Arad", "Timisoara", "Zerind", "Oradea", "Lugoj", "Mehadia", "Drobeta", "Sibiu",
 						"Rimnicu Vilcea", "Craiova", "Fagaras", "Pitesti", "Giurgiu", "Bucharest", "Neamt",
-						"Urziceni", "Iasi", "Vaslui", "Hirsova", "Hirsova"};
+						"Urziceni", "Iasi", "Vaslui", "Hirsova", "Eforie"};
 
 struct Node{
 	int value;
@@ -19,7 +19,7 @@ struct compare{
 	}
 };
 
-void printaSolucao(Graph *g, Node* node){
+void printaSolucao(Node* node){
 	int custo = node->cost;
 
 	vector<int> ans = vector<int>();
@@ -75,7 +75,15 @@ void substitui(Node* filho, priority_queue<pair<Node*,int>, vector<pair<Node*,in
 	}
 }
 
-void buscaCustoUniforme(Graph *g, int origem, int destino){
+int indexOf(string cidades[], int n, string cidade){
+	for(int i=0; i<n; i++){
+		if(cidades[i] == cidade)
+			return i;
+	}
+	return -1;
+}
+
+void buscaAEstrela(Graph *g, int origem, int destino, vector<int> h){
 	priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> borda;
 	unordered_map<int,bool> exploreds;
 	for(int i=0; i<g->n(); i++)
@@ -83,42 +91,34 @@ void buscaCustoUniforme(Graph *g, int origem, int destino){
 
 	Node* atual= new Node();
 	atual->value = origem;
-	atual->cost = 0;
+	atual->cost = 0; 
 	atual->parent = nullptr;
-	
-	borda.push(make_pair(atual,atual->cost));
+
+	borda.push(make_pair(atual, h[atual->value]+atual->cost));
 	while(!borda.empty()){
 		atual = borda.top().first;
 		borda.pop();
-		
+
 		if(atual->value == destino){
-			printaSolucao(g,atual);
+			printaSolucao(atual);
 			return;
 		}
+			
 		exploreds[atual->value] = true;
-
 		for(int i : g->neighbors(atual->value)){
 			Node *filho = new Node();
-			filho->value = i;
-			filho->cost = atual->cost + g->weight(atual->value, filho->value);
 			filho->parent = atual;
-			atual->sons.push_back(filho);
+			filho->value = i;
+			filho->cost = atual->cost + g->weight(atual->value, filho->value); 
+
 			if(!exploreds[filho->value] && isNotInBorda(filho->value,borda)){
-				borda.push(make_pair(filho,filho->cost));
+				atual->sons.push_back(filho);
+				borda.push(make_pair(filho, h[filho->value]+filho->cost));
 			}else if(isInBordaGreater(filho->value,filho->cost,borda)){
 				substitui(filho,borda);
 			}
 		}
-		
 	}
-}
-
-int indexOf(string cidades[], int n, string cidade){
-	for(int i=0; i<n; i++){
-		if(cidades[i] == cidade)
-			return i;
-	}
-	return -1;
 }
 
 int main(int argc, char *argv[]){
@@ -195,7 +195,13 @@ int main(int argc, char *argv[]){
 	grafo->addEdge(18,19,86);
 	grafo->addEdge(19,18,86);
 	
-	buscaCustoUniforme(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
+	int h_aux[] = {366,329,374,380,244,241,242,253,193,160,176,100,77,0,234,80,226,199,151,161};
+	vector<int> h;
+	for(int x : h_aux){
+		h.push_back(x);
+	}
+	
+	buscaAEstrela(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"),h);
 
 	return 0;
 }

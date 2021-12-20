@@ -8,9 +8,9 @@ string cidades[] = {"Arad", "Timisoara", "Zerind", "Oradea", "Lugoj", "Mehadia",
 
 struct Node{
 	int value;
-	int custo_atual;
+	int cost;
 	Node* parent;
-	list<Node*> filhos;
+	list<Node*> sons; //Filhos na árvore de busca, a borda é a fila de prioridade
 };
 
 struct compare{
@@ -19,26 +19,60 @@ struct compare{
 	}
 };
 
-void printaSolucao(Graph *g, vector<int> l){
-	int custo = 0;
-	int i;
-	for(i = 0; i<l.size()-1; i++){
-		custo += g->weight(l.at(i),l.at(i+1));
+void printaSolucao(Node* node){
+	int custo = node->cost;
 
-		cout << cidades[l.at(i)] << " -> ";
-
-	}
-	cout << cidades[l.at(i)] << ". Custo total: " << custo << endl;
-}
-
-vector<int> transforma(Node* node){
 	vector<int> ans = vector<int>();
 	while(node != nullptr){
 		ans.push_back(node->value);
 		node = node->parent;
 	}
 	reverse(ans.begin(), ans.end());
-	return ans;
+
+	int i;
+	for(i = 0; i<ans.size()-1; i++){
+		cout << cidades[ans.at(i)] << " -> ";
+	}
+	cout << cidades[ans.at(i)] << ". Custo total: " << custo << endl;
+}
+
+bool isNotInBorda(int value,priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> borda){
+	while(!borda.empty()){
+		if(value == borda.top().first->value)
+			return false;
+		borda.pop();
+	}
+	return true;
+}
+
+bool isInBordaGreater(int value, int cost,priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> borda ){
+	while(!borda.empty()){
+		if(value == borda.top().first->value){
+			if(borda.top().first->cost > cost){
+				return true;
+			}
+		}
+		borda.pop();
+	}
+	return false;
+}
+
+void substitui(Node* filho, priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> &borda ){
+	vector<pair<Node*,int>> aux;
+	while(!borda.empty()){
+		aux.push_back(borda.top());
+		if(filho->value == borda.top().first->value){
+			if(borda.top().first->cost > filho->cost){
+				borda.pop();
+				borda.push(make_pair(filho,filho->cost));
+				break;
+			}
+		}
+		borda.pop();
+	}
+	for(auto e : aux){
+		borda.push(e);
+	}
 }
 
 int indexOf(string cidades[], int n, string cidade){
@@ -49,47 +83,46 @@ int indexOf(string cidades[], int n, string cidade){
 	return -1;
 }
 
-vector<int> buscaGulosa(Graph *g, int origem, int destino, vector<int> h){
-	priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> q;
+void buscaGulosa(Graph *g, int origem, int destino, vector<int> h){
+	priority_queue<pair<Node*,int>, vector<pair<Node*,int>>, compare> borda;
+	unordered_map<int,bool> exploreds;
+	for(int i=0; i<g->n(); i++)
+		exploreds[i] = false;
 
 	Node* atual= new Node();
-	atual->parent = nullptr;
 	atual->value = origem;
-	atual->custo_atual = 0; 
+	atual->cost = 0; 
+	atual->parent = nullptr;
 
-	q.push(make_pair(atual, h[atual->value]));
-	while(!q.empty()){
-		atual = q.top().first;
-		q.pop();
+	borda.push(make_pair(atual, h[atual->value]));
+	while(!borda.empty()){
+		atual = borda.top().first;
+		borda.pop();
 
-		if(atual->value == destino)
-			return transforma(atual);
-
+		if(atual->value == destino){
+			printaSolucao(atual);
+			return;
+		}
+			
+		exploreds[atual->value] = true;
 		for(int i : g->neighbors(atual->value)){
 			Node *filho = new Node();
 			filho->parent = atual;
 			filho->value = i;
-			filho->custo_atual += g->weight(atual->value, filho->value); 
+			filho->cost = atual->cost + g->weight(atual->value, filho->value); 
 
-			if(g->getMark(i) != 1){
-				atual->filhos.push_back(filho);
-				q.push(make_pair(filho, h[filho->value]));
-				g->setMark(i,1);
-			}else if(q.top().first->value == filho->value && q.top().first->custo_atual > filho->custo_atual){
-				//cout << "hehe" << endl;
-				q.pop();
-				q.push(make_pair(filho,h[filho->value]));
-				atual->filhos.push_back(filho);
+			if(!exploreds[filho->value] && isNotInBorda(filho->value,borda)){
+				atual->sons.push_back(filho);
+				borda.push(make_pair(filho, h[filho->value]));
+			}else if(isInBordaGreater(filho->value,filho->cost,borda)){
+				substitui(filho,borda);
 			}
 		}
 	}
-
-	return vector<int>();
-
 }
 
 int main(int argc, char *argv[]){
-	int N = 25;
+	int N = 20;
 	Graph *grafo;
 	grafo = new Graph( N );
 
@@ -168,8 +201,7 @@ int main(int argc, char *argv[]){
 		h.push_back(x);
 	}
 	
-	vector<int> solucao = buscaGulosa(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"),h);
-	printaSolucao(grafo,solucao);
+	buscaGulosa(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"),h);
 
 	return 0;
 }

@@ -8,58 +8,73 @@ string cidades[] = {"Arad", "Timisoara", "Zerind", "Oradea", "Lugoj", "Mehadia",
 
 struct Node{
 	int value;
+	int cost;
 	Node* parent;
-	list<Node*> filhos;
+	list<Node*> sons; //Filhos na árvore de busca, a borda é a pilha
 };
 
-void printaSolucao(Graph *g, vector<int> l){
-	int custo = 0;
-	int i;
-	for(i = 0; i<l.size()-1; i++){
-		custo += g->weight(l.at(i),l.at(i+1));
+void printaSolucao(Graph *g, Node* node){
+	int custo = node->cost;
 
-		cout << cidades[l.at(i)] << " -> ";
-
-	}
-	cout << cidades[l.at(i)] << ". Custo total: " << custo << endl;
-}
-
-vector<int> transforma(Node* node){
 	vector<int> ans = vector<int>();
 	while(node != nullptr){
 		ans.push_back(node->value);
 		node = node->parent;
 	}
 	reverse(ans.begin(), ans.end());
-	return ans;
+
+	int i;
+	for(i = 0; i<ans.size()-1; i++){
+		cout << cidades[ans.at(i)] << " -> ";
+	}
+	cout << cidades[ans.at(i)] << ". Custo total: " << custo << endl;
 }
 
-vector<int> dfs(Graph *g,int origem, int destino ){
-	stack<Node*> tree = stack<Node*>();
-	Node* currentNode = new Node();
-	currentNode->parent = nullptr;
-	currentNode->value = origem;
-	tree.push(currentNode);
+bool isNotInBorda(int value,stack<Node*> borda){
+	while(!borda.empty()){
+		if(value == borda.top()->value)
+			return false;
+		borda.pop();
+	}
+	return true;
+}
 
-	while(!tree.empty()){
-		currentNode = tree.top();
-		if(currentNode->value == destino)
-			return transforma(currentNode);
-		bool avaible = false;
-		for(int i : g->neighbors(currentNode->value)){
-			if(g->getMark(i) != 1){
-				avaible = true ;
-				g->setMark(i, 1);
-				Node* newNode = new Node();
-				newNode->parent = currentNode;
-				newNode->value= i;
-				tree.push(newNode);
+void dfs(Graph *g,int origem, int destino ){
+	unordered_map<int,bool> exploreds;
+
+	for(int i=0; i<g->n(); i++)
+		exploreds[i] = false;
+	stack<Node*> borda = stack<Node*>();
+	Node* atual = new Node();
+	atual->value = origem;
+	atual->cost = 0;
+	atual->parent = nullptr;
+	
+	borda.push(atual);
+	while(!borda.empty()){
+		atual = borda.top();
+		borda.pop();
+
+		//cout << cidades[atual->value] << endl;
+
+		exploreds[atual->value] = true;
+		for(int i : g->neighbors(atual->value)){
+			Node *filho = new Node();
+			filho->value = i;
+			filho->cost = atual->cost + g->weight(atual->value, filho->value);
+			filho->parent = atual;
+			atual->sons.push_back(filho);
+
+			if(!exploreds[filho->value] && isNotInBorda(filho->value,borda)){
+				if(filho->value == destino){
+					printaSolucao(g,filho);
+					return;
+				}
+				//cout << filho->explored << endl;
+				borda.push(filho);
 			}
 		}
-		if(!avaible) tree.pop();
 	}
-	return vector<int>();
-
 }
 int indexOf(string cidades[], int n, string cidade){
 	for(int i=0; i<n; i++){
@@ -70,7 +85,7 @@ int indexOf(string cidades[], int n, string cidade){
 }
 
 int main(int argc, char *argv[]){
-	int N = 25;
+	int N = 20;
 	Graph *grafo;
 	grafo = new Graph( N );
 
@@ -144,8 +159,7 @@ int main(int argc, char *argv[]){
 	grafo->addEdge(19,18,86);
 
 	
-	vector<int> solucao = dfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
-	printaSolucao(grafo,solucao);
+	dfs(grafo,indexOf(cidades,20, argv[1]),indexOf(cidades,20, "Bucharest"));
 
 	return 0;
 }
